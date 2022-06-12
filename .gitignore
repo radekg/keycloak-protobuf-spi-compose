@@ -1,0 +1,8 @@
+ca/out/
+ca/keycloak-protobuf-event-server/*
+!ca/keycloak-protobuf-event-server/.gitkeep
+ca/keycloak-protobuf-event-client/*
+!ca/keycloak-protobuf-event-client/.gitkeep
+etc/envoy/*
+!etc/envoy/envoy-keycloak.yaml
+.DS_Store

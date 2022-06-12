@@ -1,0 +1,71 @@
+version: '3.9'
+
+networks:
+  keycloak-internal:
+    name: keycloak-internal
+  keycloak-public:
+    name: keycloak-public
+
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.21.0
+    restart: unless-stopped
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy-keycloak.yaml -l debug
+    ports:
+      - 443:443
+      - 8001:8001
+    volumes:
+      - type: bind
+        source: ./etc/envoy
+        target: /etc/envoy
+    networks:
+        - keycloak-internal
+        - keycloak-public
+
+  postgres:
+    image: postgres:13.2
+    command: -c ssl=off
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    networks:
+      - keycloak-internal
+
+  keycloak-protobuf-event-server:
+    environment:
+      BIND_HOST_PORT: ":5000"
+      TLS_TRUSTED_CERT_FILE_PATH: /etc/pki/ca.crt
+      TLS_CERT_FILE_PATH: /etc/pki/keycloak-protobuf-event-server.crt
+      TLS_KEY_FILE_PATH: /etc/pki/keycloak-protobuf-event-server.key
+    image: keycloak-protobuf-event-server:latest
+    command: start
+    restart: unless-stopped
+    volumes:
+      - ./ca/out/idp-dev.gruchalski.com.internal.crt:/etc/pki/ca.crt
+      - ./ca/keycloak-protobuf-event-server/keycloak-protobuf-event-server.crt:/etc/pki/keycloak-protobuf-event-server.crt
+      - ./ca/keycloak-protobuf-event-server/keycloak-protobuf-event-server.key:/etc/pki/keycloak-protobuf-event-server.key
+    networks:
+      - keycloak-internal
+      
+  keycloak:
+    depends_on:
+      - postgres
+      - keycloak-protobuf-event-server
+    container_name: dev_keycloak
+    image: local/keycloak:18.0.0
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_PROTOBUF_SPI_EVENT_LISTENER_ENDPOINT_HOST: keycloak-protobuf-event-server
+      KEYCLOAK_PROTOBUF_SPI_EVENT_LISTENER_ENDPOINT_PORT: "5000"
+      KEYCLOAK_PROTOBUF_SPI_EVENT_LISTENER_TLS_ENABLED: "true"
+      KEYCLOAK_PROTOBUF_SPI_EVENT_LISTENER_TLS_TRUSTED_CERTS_FILE_PATH: /etc/pki/ca.crt
+      KEYCLOAK_PROTOBUF_SPI_EVENT_LISTENER_TLS_CERT_FILE_PATH: /etc/pki/keycloak-protobuf-event-client.crt
+      KEYCLOAK_PROTOBUF_SPI_EVENT_LISTENER_TLS_KEY_FILE_PATH: /etc/pki/keycloak-protobuf-event-client.key
+    volumes:
+      - ./ca/out/idp-dev.gruchalski.com.internal.crt:/etc/pki/ca.crt
+      - ./ca/keycloak-protobuf-event-client/keycloak-protobuf-event-client.crt:/etc/pki/keycloak-protobuf-event-client.crt
+      - ./ca/keycloak-protobuf-event-client/keycloak-protobuf-event-client.key:/etc/pki/keycloak-protobuf-event-client.key
+    networks:
+      - keycloak-internal
