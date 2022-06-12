@@ -71,7 +71,7 @@ Navigate to https://idp-dev.gruchalski.com and log in top Keycloak. Username `ad
 
 2. Switch to the _Config_ tab and click in the _Event Listeners_ field, a dropdown will appear.
 
-![Available listeners](docs/images/02-realm-config.png)
+![Available listeners](docs/images/02-event-listeners-config.png)
 
 3. Select the `keycloak-protobuf-event-listener` and click _Save_.
 
